@@ -737,24 +737,39 @@
 
 <script>
 (function(){
+  // ====== إعدادات Supabase ======
+  // بدّل هذول باللي ناخذهم من Settings → API بمشروعك على supabase.com
+  const SUPABASE_URL = 'https://YOUR-PROJECT-REF.supabase.co';
+  const SUPABASE_ANON_KEY = 'YOUR-ANON-PUBLIC-KEY';
+  // ================================
+
   const $ = (sel, el=document) => el.querySelector(sel);
   const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
 
+  async function supabaseInsert(table, payload){
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+    return res;
+  }
+
   async function trackEvent(key){
     try {
-      let count = 0;
-      try {
-        const res = await window.storage.get(key, true);
-        count = res && res.value ? (parseInt(res.value, 10) || 0) : 0;
-      } catch(e) { count = 0; }
-      await window.storage.set(key, String(count + 1), true);
+      await supabaseInsert('analytics_events', { event_key: key });
     } catch(e) { console.error('analytics error', e); }
   }
 
-  trackEvent('analytics:pageviews');
+  trackEvent('pageview');
 
   $$('[data-cta]').forEach(btn=>{
-    btn.addEventListener('click', ()=> trackEvent('analytics:cta_clicks:' + btn.dataset.cta));
+    btn.addEventListener('click', ()=> trackEvent('cta_click:' + btn.dataset.cta));
   });
 
   const form = $('#waitlist-form');
@@ -764,7 +779,7 @@
   let startTracked = false;
 
   form.addEventListener('focusin', ()=>{
-    if(!startTracked){ startTracked = true; trackEvent('analytics:waitlist_starts'); }
+    if(!startTracked){ startTracked = true; trackEvent('waitlist_start'); }
   });
 
   form.addEventListener('submit', async (e)=>{
@@ -791,11 +806,16 @@
     submitBtn.textContent = 'جاري الإرسال...';
 
     try {
-      const key = 'waitlist:' + email;
-      let existing = null;
-      try { existing = await window.storage.get(key, true); } catch(e) { existing = null; }
+      const entry = {
+        name: name || null,
+        email: email,
+        level: levelInput.value,
+        goal: goal || null
+      };
+      const res = await supabaseInsert('waitlist_signups', entry);
 
-      if(existing && existing.value){
+      if(res.status === 409){
+        // email موجود مسبقًا (unique constraint) — يعني مسجل من قبل
         statusEl.textContent = 'أنت مسجل عندنا من قبل! بنعلمك أول ما يفتح الوصول المبكر.';
         statusEl.className = 'wl-status success';
         form.reset();
@@ -804,18 +824,13 @@
         return;
       }
 
-      const entry = {
-        name: name || null,
-        email: email,
-        level: levelInput.value,
-        goal: goal || null,
-        ts: new Date().toISOString()
-      };
-      const result = await window.storage.set(key, JSON.stringify(entry), true);
-      if(!result) throw new Error('storage set failed');
+      if(!res.ok){
+        const errBody = await res.text().catch(()=> '');
+        throw new Error('supabase insert failed: ' + res.status + ' ' + errBody);
+      }
 
-      await trackEvent('analytics:waitlist_submissions');
-      await trackEvent('analytics:level:' + levelInput.value);
+      await trackEvent('waitlist_submissions');
+      await trackEvent('level:' + levelInput.value);
 
       statusEl.textContent = 'أنت داخل القائمة! بنعلمك أول ما يفتح الوصول المبكر.';
       statusEl.className = 'wl-status success';
@@ -848,7 +863,7 @@
     milestones.forEach(m=>{
       if(scrolled >= m && !reached.has(m)){
         reached.add(m);
-        trackEvent('analytics:scroll_' + m);
+        trackEvent('scroll_' + m);
       }
     });
   }, { passive: true });
