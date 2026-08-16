@@ -737,39 +737,25 @@
 
 <script>
 (function(){
-  // ====== إعدادات Supabase ======
-  // بدّل هذول باللي ناخذهم من Settings → API بمشروعك على supabase.com
-  const SUPABASE_URL = 'https://jtmtlzfhmtpnhebwgflh.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_1AFyCH0_kge2CfhUtaUY9g_f387xjnv';
-  // ================================
-
   const $ = (sel, el=document) => el.querySelector(sel);
   const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
 
-  async function supabaseInsert(table, payload){
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(payload)
-    });
-    return res;
-  }
-
+  // استخدام localStorage بدلاً من window.storage لمنع حدوث TypeError
   async function trackEvent(key){
     try {
-      await supabaseInsert('analytics_events', { event_key: key });
+      let count = 0;
+      try {
+        const val = localStorage.getItem(key);
+        count = val ? (parseInt(val, 10) || 0) : 0;
+      } catch(e) { count = 0; }
+      localStorage.setItem(key, String(count + 1));
     } catch(e) { console.error('analytics error', e); }
   }
 
-  trackEvent('pageview');
+  trackEvent('analytics:pageviews');
 
   $$('[data-cta]').forEach(btn=>{
-    btn.addEventListener('click', ()=> trackEvent('cta_click:' + btn.dataset.cta));
+    btn.addEventListener('click', ()=> trackEvent('analytics:cta_clicks:' + btn.dataset.cta));
   });
 
   const form = $('#waitlist-form');
@@ -779,7 +765,7 @@
   let startTracked = false;
 
   form.addEventListener('focusin', ()=>{
-    if(!startTracked){ startTracked = true; trackEvent('waitlist_start'); }
+    if(!startTracked){ startTracked = true; trackEvent('analytics:waitlist_starts'); }
   });
 
   form.addEventListener('submit', async (e)=>{
@@ -806,16 +792,11 @@
     submitBtn.textContent = 'جاري الإرسال...';
 
     try {
-      const entry = {
-        name: name || null,
-        email: email,
-        level: levelInput.value,
-        goal: goal || null
-      };
-      const res = await supabaseInsert('waitlist_signups', entry);
+      const key = 'waitlist:' + email;
+      let existing = null;
+      try { existing = localStorage.getItem(key); } catch(e) { existing = null; }
 
-      if(res.status === 409){
-        // email موجود مسبقًا (unique constraint) — يعني مسجل من قبل
+      if(existing){
         statusEl.textContent = 'أنت مسجل عندنا من قبل! بنعلمك أول ما يفتح الوصول المبكر.';
         statusEl.className = 'wl-status success';
         form.reset();
@@ -824,13 +805,18 @@
         return;
       }
 
-      if(!res.ok){
-        const errBody = await res.text().catch(()=> '');
-        throw new Error('supabase insert failed: ' + res.status + ' ' + errBody);
-      }
+      const entry = {
+        name: name || null,
+        email: email,
+        level: levelInput.value,
+        goal: goal || null,
+        ts: new Date().toISOString()
+      };
+      
+      localStorage.setItem(key, JSON.stringify(entry));
 
-      await trackEvent('waitlist_submissions');
-      await trackEvent('level:' + levelInput.value);
+      await trackEvent('analytics:waitlist_submissions');
+      await trackEvent('analytics:level:' + levelInput.value);
 
       statusEl.textContent = 'أنت داخل القائمة! بنعلمك أول ما يفتح الوصول المبكر.';
       statusEl.className = 'wl-status success';
@@ -863,7 +849,7 @@
     milestones.forEach(m=>{
       if(scrolled >= m && !reached.has(m)){
         reached.add(m);
-        trackEvent('scroll_' + m);
+        trackEvent('analytics:scroll_' + m);
       }
     });
   }, { passive: true });
