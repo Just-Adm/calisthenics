@@ -1,872 +1,772 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>كاليستي — تعلم الكاليستينكس بالعربي</title>
-<meta name="description" content="منصة عربية مجانية للمبتدئين لتعلم الكاليستينكس، اتباع خطط تدريب واضحة، والتقدم خطوة بخطوة بدون الحاجة لمدرب شخصي. انضم لقائمة الانتظار.">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>كاليستي — تعلّم مهارات الكاليسثينيكس بالعربية</title>
+<meta name="description" content="كاليستي تطبيق عربي يعلّمك مهارات الكاليسثينيكس خطوة بخطوة. انضم لقائمة الانتظار مجاناً واحصل على الوصول المبكر." />
+<meta name="theme-color" content="#0E0F13" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="ar_JO" />
+<meta property="og:title" content="كاليستي — تعلّم مهارات الكاليسثينيكس بالعربية" />
+<meta property="og:description" content="انضم لقائمة الانتظار مجاناً واحصل على الوصول المبكر." />
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<!--
+=====================================================================
+  إعداد Supabase — خطوتان فقط
+=====================================================================
+
+  ١) في محرّر SQL داخل مشروع Supabase، شغّل هذا:
+
+      create table public.waitlist (
+        id          bigint generated always as identity primary key,
+        handle      text not null,
+        handle_type text not null check (handle_type in ('email','instagram')),
+        created_at  timestamptz not null default now()
+      );
+
+      -- هذا القيد هو ما يمنع التكرار فعلياً (على مستوى الخادم)
+      create unique index waitlist_handle_key on public.waitlist (lower(handle));
+
+      alter table public.waitlist enable row level security;
+
+      -- السماح بالإضافة فقط: لا أحد يستطيع قراءة القائمة من المتصفح
+      create policy "anon_can_insert"
+        on public.waitlist for insert
+        to anon
+        with check (
+          char_length(handle) between 1 and 254
+          and handle_type in ('email','instagram')
+        );
+
+  ٢) انسخ Project URL و anon public key من
+     Project Settings ← API، وضعهما في الثابتين أسفل الصفحة
+     (ابحث عن SUPABASE_URL و SUPABASE_ANON_KEY).
+
+  ملاحظة: مفتاح anon مصمَّم ليكون علنياً في المتصفح؛ الحماية الحقيقية
+  تأتي من RLS أعلاه (إضافة فقط، بدون قراءة).
+
+  قبل ضبط المفتاحين تعمل الصفحة في «وضع تجريبي»: النموذج يتصرّف
+  بشكل كامل لكن لا يُخزَّن شيء.
+=====================================================================
+-->
+
 <style>
   :root{
-    --ink:#14130f;
-    --ink-2:#1c1a15;
-    --panel:#201d17;
-    --line:#332e26;
-    --chalk:#f2ede4;
-    --chalk-dim:#b7b2a6;
-    --chalk-faint:#7d786d;
-    --signal:#ff5a1f;
-    --signal-dim:#c94418;
-    --signal-soft:rgba(255,90,31,0.14);
-    --radius:14px;
-    --wrap:1120px;
+    --bg:#0E0F13;
+    --bg-soft:#141620;
+    --surface:#16181F;
+    --surface-2:#1C1F28;
+    --border:#262A35;
+    --border-soft:#1F222B;
+    --text:#F4F5F7;
+    --text-2:#C3C8D2;
+    --muted:#8D95A3;
+    --orange:#FF7A1A;
+    --orange-2:#FFA24D;
+    --orange-soft:rgba(255,122,26,.12);
+    --success:#31C97E;
+    --success-soft:rgba(49,201,126,.12);
+    --danger:#FF6B6B;
+    --danger-soft:rgba(255,107,107,.12);
+    --radius:16px;
+    --radius-lg:24px;
+    --maxw:1120px;
+    --shadow:0 18px 50px -22px rgba(0,0,0,.85);
   }
-  *{box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
-  @media (prefers-reduced-motion: reduce){
-    html{scroll-behavior:auto;}
-    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; scroll-behavior:auto !important;}
-  }
+
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
   body{
     margin:0;
-    background:var(--ink);
-    color:var(--chalk);
-    font-family:'Cairo', sans-serif;
-    line-height:1.6;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Tajawal","Segoe UI",system-ui,-apple-system,"Noto Sans Arabic","Helvetica Neue",Arial,sans-serif;
+    font-size:17px;
+    line-height:1.75;
     -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
   }
-  img,svg{display:block; max-width:100%;}
-  a{color:inherit;}
-  .eyebrow{
-    font-family:'Oswald', sans-serif;
-    font-size:12px;
-    letter-spacing:0.14em;
-    text-transform:uppercase;
-    color:var(--signal);
-    font-weight:600;
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    direction:ltr;
-    unicode-bidi:isolate;
-  }
-  .eyebrow::before{
-    content:"";
-    width:18px; height:2px;
-    background:var(--signal);
-    display:inline-block;
-  }
-  .wrap{
-    max-width:var(--wrap);
-    margin:0 auto;
-    padding-inline:20px;
-  }
-  h1,h2,h3{
-    font-family:'Cairo', sans-serif;
-    font-weight:800;
-    margin:0;
-    line-height:1.25;
-  }
-  p{margin:0;}
+  img{max-width:100%;display:block}
+  a{color:inherit}
+  h1,h2,h3{line-height:1.3;margin:0;font-weight:800;letter-spacing:-.01em}
+  p{margin:0}
+  .wrap{width:100%;max-width:var(--maxw);margin-inline:auto;padding-inline:22px}
+  .en{direction:ltr;unicode-bidi:isolate;display:inline-block}
 
-  /* focus visibility */
-  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible{
-    outline:2px solid var(--signal);
-    outline-offset:3px;
-  }
+  /* ---------- background glow ---------- */
+  .glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+  .glow::before,.glow::after{content:"";position:absolute;border-radius:50%;filter:blur(120px);opacity:.5}
+  .glow::before{width:640px;height:640px;background:rgba(255,122,26,.16);top:-260px;inset-inline-start:-180px}
+  .glow::after{width:520px;height:520px;background:rgba(255,122,26,.07);top:420px;inset-inline-end:-220px}
 
-  /* ---------- NAV ---------- */
-  header.nav{
-    position:sticky; top:0; z-index:50;
-    background:rgba(20,19,15,0.86);
-    backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--line);
-  }
-  .nav-inner{
-    display:flex; align-items:center; justify-content:space-between;
-    padding-block:14px;
-  }
-  .logo{
-    font-weight:900; font-size:20px; letter-spacing:-0.01em;
-    display:flex; align-items:center; gap:8px;
-  }
-  .logo .dot{
-    width:8px; height:8px; border-radius:50%;
-    background:var(--signal);
-    display:inline-block;
-  }
-  .nav-cta{
-    font-family:'Oswald', sans-serif;
-    font-size:13px; letter-spacing:0.04em;
-    background:var(--signal);
-    color:var(--ink);
-    padding:9px 18px;
-    border-radius:999px;
-    text-decoration:none;
-    font-weight:600;
-    white-space:nowrap;
-  }
+  /* ---------- header ---------- */
+  header{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);
+    background:rgba(14,15,19,.78);border-bottom:1px solid var(--border-soft)}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    height:66px;max-width:var(--maxw);margin-inline:auto;padding-inline:22px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;text-decoration:none}
+  .mark{width:34px;height:34px;border-radius:10px;flex:none;
+    background:linear-gradient(140deg,var(--orange),#FF9A3D);
+    display:grid;place-items:center;box-shadow:0 6px 18px -6px rgba(255,122,26,.7)}
+  .mark svg{width:19px;height:19px;display:block}
+  .nav-cta{display:inline-flex;align-items:center;gap:8px;height:40px;padding-inline:18px;
+    border-radius:999px;background:var(--orange);color:#12130F;font-weight:700;font-size:15px;
+    text-decoration:none;border:0;cursor:pointer;transition:transform .15s ease,filter .15s ease;
+    font-family:inherit}
+  .nav-cta:hover{filter:brightness(1.07)}
+  .nav-cta:active{transform:translateY(1px)}
 
-  /* ---------- HERO ---------- */
-  .hero{
-    position:relative;
-    padding-block:56px 64px;
-    overflow:hidden;
-  }
-  .hero-illustration{
-    position:absolute;
-    inset-inline-end:-60px;
-    top:40px;
-    width:340px;
-    opacity:0.9;
-    pointer-events:none;
-  }
-  .hero-content{
-    position:relative;
-    max-width:640px;
-  }
-  .hero h1{
-    font-size:clamp(32px, 6vw, 54px);
-    margin-block:18px 20px;
-  }
-  .hero h1 .accent{color:var(--signal);}
-  .hero-sub{
-    font-size:clamp(16px, 2.4vw, 19px);
-    color:var(--chalk-dim);
-    max-width:52ch;
-    margin-bottom:30px;
-  }
-  .cta-row{
-    display:flex; flex-wrap:wrap;
-    gap:14px;
-    align-items:center;
-  }
-  .btn-primary{
-    font-family:'Cairo', sans-serif;
-    font-weight:700;
-    font-size:16px;
-    background:var(--signal);
-    color:var(--ink);
-    border:none;
-    padding:16px 30px;
-    border-radius:999px;
-    cursor:pointer;
-    text-decoration:none;
-    display:inline-block;
-    box-shadow:0 8px 24px -8px rgba(255,90,31,0.55);
-    transition:transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 12px 28px -8px rgba(255,90,31,0.7);}
-  .btn-ghost{
-    font-family:'Cairo', sans-serif;
-    font-weight:600;
-    font-size:15px;
-    color:var(--chalk);
-    text-decoration:none;
-    padding:16px 8px;
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    border-bottom:1px solid transparent;
-  }
-  .btn-ghost:hover{border-color:var(--chalk-faint);}
-  .btn-ghost svg{width:16px; height:16px;}
+  /* ---------- hero ---------- */
+  main{position:relative;z-index:1}
+  .hero{padding:64px 0 84px}
+  .hero-grid{display:grid;grid-template-columns:1.32fr .68fr;gap:48px;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:9px;padding:7px 15px;border-radius:999px;
+    background:var(--orange-soft);border:1px solid rgba(255,122,26,.28);
+    color:var(--orange-2);font-size:14px;font-weight:700;margin-bottom:22px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--orange);flex:none;
+    box-shadow:0 0 0 0 rgba(255,122,26,.55);animation:ping 2.2s ease-out infinite}
+  @keyframes ping{0%{box-shadow:0 0 0 0 rgba(255,122,26,.55)}70%{box-shadow:0 0 0 9px rgba(255,122,26,0)}100%{box-shadow:0 0 0 0 rgba(255,122,26,0)}}
+  h1{font-size:clamp(32px,5.2vw,52px)}
+  h1 .hl{color:var(--orange)}
+  .lede{margin-top:20px;font-size:clamp(17px,2.1vw,19.5px);color:var(--text-2);max-width:44ch}
 
-  /* ---------- DIVIDER ---------- */
-  .divider{
-    display:flex; align-items:center; justify-content:center;
-    padding-block:6px;
-  }
+  /* ---------- form ---------- */
+  .join{margin-top:32px;max-width:620px}
+  .field{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+  .input-shell{position:relative;flex:1 1 260px;min-width:0}
+  input[type="text"]{
+    width:100%;height:56px;border-radius:14px;border:1.5px solid var(--border);
+    background:var(--surface);color:var(--text);font-family:inherit;font-size:16px;
+    padding-right:16px;padding-left:16px;outline:none;
+    transition:border-color .15s ease,box-shadow .15s ease,padding .15s ease}
+  .input-shell.kinded input[type="text"]{padding-left:42px}
+  input[type="text"]::placeholder{color:var(--muted);font-size:14.5px}
+  input[type="text"]:focus{border-color:var(--orange);box-shadow:0 0 0 4px rgba(255,122,26,.15)}
+  input[type="text"][aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 4px rgba(255,107,107,.13)}
+  .kind{position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    display:grid;place-items:center;width:22px;height:22px;color:var(--muted);
+    opacity:0;transition:opacity .18s ease,color .18s ease;pointer-events:none}
+  .kind.on{opacity:1;color:var(--orange)}
+  .kind svg{width:20px;height:20px}
 
-  /* ---------- SECTION BASE ---------- */
-  section{padding-block:64px;}
-  .section-head{
-    max-width:640px;
-    margin-bottom:36px;
-  }
-  .section-head h2{
-    font-size:clamp(26px, 4vw, 36px);
-    margin-top:14px;
-  }
+  .btn-join{position:relative;flex:0 0 auto;height:56px;padding-inline:26px;border:0;border-radius:14px;
+    background:linear-gradient(140deg,var(--orange),#FF9333);color:#141308;
+    font-family:inherit;font-weight:800;font-size:16.5px;cursor:pointer;
+    box-shadow:0 12px 28px -14px rgba(255,122,26,.95);
+    transition:filter .15s ease,transform .12s ease;white-space:nowrap}
+  .btn-join:hover:not(:disabled){filter:brightness(1.06)}
+  .btn-join:active:not(:disabled){transform:translateY(1px)}
+  .btn-join:disabled{cursor:not-allowed;opacity:.72}
+  .btn-join .label{display:inline-flex;align-items:center;gap:9px}
+  .spinner{width:17px;height:17px;border-radius:50%;border:2.2px solid rgba(20,19,8,.3);
+    border-top-color:#141308;animation:spin .7s linear infinite;display:none;flex:none}
+  .is-loading .spinner{display:block}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* reveal animation */
-  .reveal{opacity:0; transform:translateY(16px); transition:opacity 0.6s ease, transform 0.6s ease;}
-  .reveal.in-view{opacity:1; transform:translateY(0);}
+  .assure{margin-top:14px;color:var(--muted);font-size:14.5px;display:flex;flex-wrap:wrap;
+    gap:6px 14px;align-items:center}
+  .assure span{display:inline-flex;align-items:center;gap:6px}
+  .assure svg{width:15px;height:15px;color:var(--success);flex:none}
 
-  /* ---------- PROBLEM ---------- */
-  .problem{
-    background:var(--panel);
-    border-top:1px solid var(--line);
-    border-bottom:1px solid var(--line);
-  }
-  .problem-list{
-    list-style:none; margin:0; padding:0;
-    display:grid; gap:2px;
-    background:var(--line);
-    border-radius:var(--radius);
-    overflow:hidden;
-  }
-  .problem-list li{
-    background:var(--panel);
-    padding:18px 20px;
-    display:flex;
-    align-items:flex-start;
-    gap:14px;
-    font-size:15.5px;
-    color:var(--chalk-dim);
-  }
-  .problem-list li svg{
-    flex-shrink:0;
-    width:20px; height:20px;
-    margin-top:2px;
-    color:var(--signal);
-  }
-  .problem-list li b{color:var(--chalk); font-weight:600;}
+  .msg{margin-top:16px;display:none;gap:11px;padding:14px 16px;border-radius:14px;
+    font-size:15.5px;line-height:1.65;align-items:flex-start}
+  .msg.show{display:flex}
+  .msg svg{width:19px;height:19px;flex:none;margin-top:3px}
+  .msg.ok{background:var(--success-soft);border:1px solid rgba(49,201,126,.3);color:#9BEFC6}
+  .msg.ok svg{color:var(--success)}
+  .msg.err{background:var(--danger-soft);border:1px solid rgba(255,107,107,.3);color:#FFC0C0}
+  .msg.err svg{color:var(--danger)}
+  .msg.info{background:rgba(255,162,77,.1);border:1px solid rgba(255,162,77,.28);color:#FFD3A8}
+  .msg.info svg{color:var(--orange-2)}
+  .hp{position:absolute;inset-inline-start:-9999px;width:1px;height:1px;opacity:0}
 
-  /* ---------- SOLUTION ---------- */
-  .solution-grid{
-    display:grid;
-    grid-template-columns:1fr;
-    gap:16px;
-  }
-  @media(min-width:640px){
-    .solution-grid{grid-template-columns:1fr 1fr;}
-  }
-  .solution-card{
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    padding:24px;
-    position:relative;
-  }
-  .solution-card .icon{
-    width:40px; height:40px;
-    border-radius:10px;
-    background:var(--signal-soft);
-    color:var(--signal);
-    display:flex; align-items:center; justify-content:center;
-    margin-bottom:16px;
-  }
-  .solution-card .icon svg{width:22px; height:22px;}
-  .solution-card h3{
-    font-size:18px; margin-bottom:8px;
-  }
-  .solution-card p{
-    color:var(--chalk-dim); font-size:14.5px;
-  }
-  .badge-soon{
-    display:inline-block;
-    margin-top:14px;
-    font-family:'Oswald', sans-serif;
-    font-size:11px;
-    letter-spacing:0.06em;
-    color:var(--signal);
-    border:1px solid var(--signal-dim);
-    padding:4px 10px;
-    border-radius:999px;
-  }
+  /* ---------- phone mock ---------- */
+  .phone-col{display:flex;justify-content:center}
+  .phone{width:270px;border-radius:36px;padding:11px;background:linear-gradient(160deg,#242833,#14161D);
+    border:1px solid #2E3341;box-shadow:var(--shadow);transform:rotate(-2.2deg)}
+  .screen{border-radius:26px;background:#101218;padding:18px 15px 22px;overflow:hidden}
+  .notch{width:78px;height:5px;border-radius:99px;background:#2B303B;margin:0 auto 16px}
+  .streak{display:flex;align-items:center;gap:10px;background:var(--surface-2);
+    border:1px solid var(--border);border-radius:14px;padding:12px 13px}
+  .streak b{font-size:21px}
+  .flame{font-size:19px;line-height:1}
+  .streak small{color:var(--muted);font-size:12.5px;display:block;line-height:1.4}
+  .mock-h{font-size:13.5px;color:var(--muted);margin:18px 0 9px}
+  .mock-card{display:flex;align-items:center;gap:11px;background:var(--surface-2);
+    border:1px solid var(--border);border-radius:14px;padding:0;margin-bottom:9px;overflow:hidden}
+  .mock-art{width:52px;align-self:stretch;min-height:56px;flex:none;
+    background:linear-gradient(150deg,rgba(255,122,26,.85),rgba(255,122,26,.25))}
+  .mock-art.a2{background:linear-gradient(150deg,rgba(255,122,26,.55),rgba(255,122,26,.16))}
+  .mock-art.a3{background:linear-gradient(150deg,rgba(141,149,163,.45),rgba(141,149,163,.12))}
+  .mock-t{font-size:14px;font-weight:700}
+  .mock-s{font-size:12px;color:var(--muted)}
+  .mock-lock{margin-inline-start:auto;padding-inline-end:12px;color:var(--muted);font-size:12px}
 
-  /* ---------- HOW IT WORKS ---------- */
-  .steps{
-    display:grid;
-    grid-template-columns:1fr;
-    gap:0;
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    overflow:hidden;
-  }
-  @media(min-width:768px){
-    .steps{grid-template-columns:1fr 1fr 1fr;}
-  }
-  .step{
-    padding:28px 24px;
-    border-bottom:1px solid var(--line);
-    position:relative;
-  }
-  @media(min-width:768px){
-    .step{border-bottom:none; border-inline-start:1px solid var(--line);}
-    .step:first-child{border-inline-start:none;}
-  }
-  .step:last-child{border-bottom:none;}
-  .step .num{
-    font-family:'Oswald', sans-serif;
-    font-size:13px;
-    color:var(--signal);
-    letter-spacing:0.08em;
-    direction:ltr; unicode-bidi:isolate;
-    display:block;
-    margin-bottom:12px;
-  }
-  .step h3{font-size:19px; margin-bottom:8px;}
-  .step p{color:var(--chalk-dim); font-size:14.5px;}
+  /* ---------- sections ---------- */
+  section{padding:78px 0;position:relative}
+  .band{border-top:1px solid var(--border-soft);background:linear-gradient(180deg,var(--bg-soft),var(--bg))}
+  .sec-head{max-width:620px;margin-bottom:40px}
+  .eyebrow{color:var(--orange);font-weight:700;font-size:14.5px;margin-bottom:10px}
+  h2{font-size:clamp(26px,3.6vw,36px)}
+  .sec-head p{margin-top:14px;color:var(--text-2);font-size:17px}
 
-  /* ---------- VALIDATION ---------- */
-  .validation{
-    background:var(--panel);
-    border-top:1px solid var(--line);
-    border-bottom:1px solid var(--line);
-  }
-  .validation-inner{
-    display:flex;
-    flex-direction:column;
-    gap:20px;
-    max-width:720px;
-  }
-  .validation-quote{
-    font-size:clamp(19px, 3vw, 25px);
-    font-weight:600;
-    border-inline-start:3px solid var(--signal);
-    padding-inline-start:18px;
-  }
-  .validation p.note{
-    color:var(--chalk-dim);
-    font-size:15px;
-    max-width:60ch;
-  }
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+    padding:26px 22px;transition:border-color .18s ease,transform .18s ease}
+  .card:hover{border-color:#333949;transform:translateY(-3px)}
+  .ico{width:44px;height:44px;border-radius:13px;background:var(--orange-soft);
+    display:grid;place-items:center;margin-bottom:16px;color:var(--orange)}
+  .ico svg{width:22px;height:22px}
+  .card h3{font-size:18.5px;margin-bottom:9px}
+  .card p{color:var(--muted);font-size:15.5px;line-height:1.72}
 
-  /* ---------- WAITLIST ---------- */
-  .waitlist{
-    padding-block:72px;
-  }
-  .waitlist-inner{
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:20px;
-    padding:32px 24px;
-    max-width:620px;
-    margin:0 auto;
-  }
-  @media(min-width:640px){
-    .waitlist-inner{padding:44px 48px;}
-  }
-  .waitlist-inner .section-head{margin-bottom:26px; max-width:none;}
-  form#waitlist-form{
-    display:flex; flex-direction:column; gap:16px;
-  }
-  .field label{
-    display:block;
-    font-size:13.5px;
-    color:var(--chalk-dim);
-    margin-bottom:6px;
-    font-weight:600;
-  }
-  .field .opt{
-    color:var(--chalk-faint);
-    font-weight:400;
-    font-size:12px;
-  }
-  .field input[type="text"],
-  .field input[type="email"],
-  .field textarea{
-    width:100%;
-    background:var(--ink);
-    border:1px solid var(--line);
-    color:var(--chalk);
-    padding:13px 14px;
-    border-radius:10px;
-    font-family:'Cairo', sans-serif;
-    font-size:15px;
-  }
-  .field textarea{resize:vertical; min-height:70px;}
-  .field input:focus, .field textarea:focus{border-color:var(--signal);}
-  .level-options{
-    display:flex; flex-wrap:wrap; gap:8px;
-  }
-  .level-options input{position:absolute; opacity:0; pointer-events:none;}
-  .level-options label{
-    margin:0;
-    font-size:14px;
-    font-weight:500;
-    color:var(--chalk-dim);
-    background:var(--ink);
-    border:1px solid var(--line);
-    padding:9px 16px;
-    border-radius:999px;
-    cursor:pointer;
-    transition:all 0.15s ease;
-  }
-  .level-options input:checked + label{
-    background:var(--signal-soft);
-    border-color:var(--signal);
-    color:var(--chalk);
-  }
-  #wl-submit{
-    font-family:'Cairo', sans-serif;
-    font-weight:700;
-    font-size:16px;
-    background:var(--signal);
-    color:var(--ink);
-    border:none;
-    padding:16px;
-    border-radius:999px;
-    cursor:pointer;
-    margin-top:6px;
-    transition:transform 0.15s ease, opacity 0.15s ease;
-  }
-  #wl-submit:hover{transform:translateY(-1px);}
-  #wl-submit:disabled{opacity:0.7; cursor:default; transform:none;}
-  .wl-status{
-    font-size:14px;
-    min-height:20px;
-    font-weight:600;
-  }
-  .wl-status.success{color:#7fd88a;}
-  .wl-status.error{color:#ff8a65;}
-  .wl-fineprint{
-    color:var(--chalk-faint);
-    font-size:12.5px;
-    margin-top:2px;
-  }
+  .skills{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .skill{display:flex;align-items:center;gap:16px;background:var(--surface);
+    border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;min-height:88px}
+  .skill-art{width:74px;align-self:stretch;flex:none;
+    background:linear-gradient(150deg,rgba(255,122,26,.75),rgba(255,122,26,.18));
+    display:grid;place-items:center;color:#191207;font-weight:800;font-size:19px}
+  .skill-body{padding-inline-end:16px;padding-block:12px}
+  .skill-body h3{font-size:17px}
+  .skill-body p{color:var(--muted);font-size:14px;margin-top:3px}
 
-  /* ---------- FAQ ---------- */
-  .faq-list{display:flex; flex-direction:column; gap:2px; background:var(--line); border-radius:var(--radius); overflow:hidden;}
-  .faq-item{background:var(--ink-2);}
-  .faq-q{
-    width:100%;
-    text-align:start;
-    background:none;
-    border:none;
-    color:var(--chalk);
-    font-family:'Cairo', sans-serif;
-    font-weight:700;
-    font-size:16px;
-    padding:20px;
-    display:flex; align-items:center; justify-content:space-between;
-    cursor:pointer;
-    gap:12px;
-  }
-  .faq-q .icon-plus{
-    flex-shrink:0;
-    width:20px; height:20px;
-    position:relative;
-  }
-  .faq-q .icon-plus::before, .faq-q .icon-plus::after{
-    content:""; position:absolute; background:var(--signal);
-    top:50%; left:50%; transform:translate(-50%,-50%);
-  }
-  .faq-q .icon-plus::before{width:14px; height:2px;}
-  .faq-q .icon-plus::after{width:2px; height:14px; transition:opacity 0.2s ease;}
-  .faq-item.open .faq-q .icon-plus::after{opacity:0;}
-  .faq-a{
-    max-height:0;
-    overflow:hidden;
-    transition:max-height 0.3s ease;
-    padding-inline:20px;
-  }
-  .faq-item.open .faq-a{max-height:200px;}
-  .faq-a p{
-    color:var(--chalk-dim);
-    font-size:14.5px;
-    padding-bottom:20px;
-  }
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;counter-reset:s}
+  .step{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:26px 24px}
+  .num{width:38px;height:38px;border-radius:12px;background:var(--orange);color:#141308;
+    display:grid;place-items:center;font-weight:800;font-size:17px;margin-bottom:16px}
+  .step h3{font-size:18.5px;margin-bottom:8px}
+  .step p{color:var(--muted);font-size:15.5px}
 
-  /* ---------- FINAL CTA ---------- */
-  .final-cta{
-    background:var(--signal);
-    color:var(--ink);
-    text-align:center;
-    padding-block:72px;
-  }
-  .final-cta h2{
-    font-size:clamp(26px, 4.5vw, 38px);
-    color:var(--ink);
-    margin-bottom:14px;
-  }
-  .final-cta p{
-    color:rgba(20,19,15,0.75);
-    max-width:52ch;
-    margin:0 auto 28px;
-    font-size:16px;
-  }
-  .final-cta .btn-primary{
-    background:var(--ink);
-    color:var(--chalk);
-    box-shadow:none;
-  }
-  .final-cta .btn-primary:hover{background:#000;}
+  /* ---------- cta ---------- */
+  .cta-box{background:linear-gradient(150deg,rgba(255,122,26,.14),rgba(255,122,26,.03));
+    border:1px solid rgba(255,122,26,.3);border-radius:28px;padding:52px 40px;text-align:center}
+  .cta-box h2{max-width:22ch;margin-inline:auto}
+  .cta-box p{margin-top:14px;color:var(--text-2);max-width:52ch;margin-inline:auto}
+  .cta-box .nav-cta{height:52px;padding-inline:32px;font-size:17px;margin-top:28px;font-weight:800}
 
-  /* ---------- FOOTER ---------- */
-  footer{
-    padding-block:28px;
-    border-top:1px solid var(--line);
-    color:var(--chalk-faint);
-    font-size:13px;
-    text-align:center;
+  /* ---------- faq ---------- */
+  .faq{max-width:760px}
+  details{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);
+    padding:0 20px;margin-bottom:12px}
+  details[open]{border-color:#333949}
+  summary{cursor:pointer;list-style:none;padding:18px 0;font-weight:700;font-size:17px;
+    display:flex;align-items:center;justify-content:space-between;gap:14px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";color:var(--orange);font-size:22px;font-weight:700;flex:none;line-height:1}
+  details[open] summary::after{content:"−"}
+  details p{padding-bottom:20px;color:var(--muted);font-size:15.5px;margin-top:-4px}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--border-soft);padding:38px 0;color:var(--muted);font-size:14.5px}
+  .foot{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;justify-content:space-between}
+  .foot a{color:var(--text-2);text-decoration:none}
+  .foot a:hover{color:var(--orange)}
+
+  :focus-visible{outline:3px solid var(--orange-2);outline-offset:3px;border-radius:8px}
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+  @media (max-width:980px){
+    .hero-grid{grid-template-columns:1fr;gap:46px}
+    .phone{transform:none}
+    .cards{grid-template-columns:repeat(2,1fr)}
+    .skills{grid-template-columns:repeat(2,1fr)}
+    .steps{grid-template-columns:1fr}
+  }
+  @media (max-width:620px){
+    body{font-size:16.5px}
+    .hero{padding:44px 0 62px}
+    section{padding:60px 0}
+    .wrap{padding-inline:18px}
+    .cards,.skills{grid-template-columns:1fr}
+    .input-shell{flex:1 1 100%}
+    .btn-join{flex:1 1 100%;padding-inline:20px}
+    input[type="text"]::placeholder{font-size:14px}
+    .phone{width:238px}
+    .cta-box{padding:40px 24px}
+    .nav-cta{padding-inline:15px;font-size:14.5px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   }
 </style>
 </head>
 <body>
+<div class="glow" aria-hidden="true"></div>
 
-<header class="nav">
-  <div class="wrap nav-inner">
-    <div class="logo"><span class="dot"></span>كاليستي</div>
-    <a class="nav-cta" href="#waitlist" data-cta="nav">انضم الآن</a>
-  </div>
+<header>
+  <nav class="nav">
+    <a class="brand" href="#top">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1A1204" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 9v6M20 9v6M7 7v10M17 7v10M7 12h10"/>
+        </svg>
+      </span>
+      كاليستي
+    </a>
+    <button class="nav-cta" type="button" data-scroll-join>انضم للقائمة</button>
+  </nav>
 </header>
 
-<section class="hero">
-  <div class="wrap">
-    <div class="hero-content">
-      <span class="eyebrow">Free &middot; Arabic-first</span>
-      <h1>تعلم <span class="accent">الكاليستينكس</span> بالعربي.<br>تمرّن على طريقتك.</h1>
-      <p class="hero-sub">منصة عربية مجانية بالكامل تساعد المبتدئين يتعلمون الكاليستينكس، يتبعون خطط تدريب واضحة، ويتقدمون خطوة بخطوة — من غير ما يحتاجون مدرب شخصي.</p>
-      <div class="cta-row">
-        <a href="#waitlist" class="btn-primary" data-cta="hero-primary">انضم لقائمة الانتظار</a>
-        <a href="#how-it-works" class="btn-ghost" data-cta="hero-secondary">
-          شاهد كيف تعمل
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        </a>
-      </div>
-    </div>
-  </div>
-  <svg class="hero-illustration" viewBox="0 0 300 320" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <line x1="40" y1="40" x2="260" y2="40" stroke="#4a4438" stroke-width="6" stroke-linecap="round"/>
-    <line x1="55" y1="40" x2="55" y2="130" stroke="#4a4438" stroke-width="6" stroke-linecap="round"/>
-    <line x1="245" y1="40" x2="245" y2="130" stroke="#4a4438" stroke-width="6" stroke-linecap="round"/>
-    <line x1="150" y1="46" x2="150" y2="90" stroke="#ff5a1f" stroke-width="5" stroke-linecap="round"/>
-    <circle cx="150" cy="103" r="14" fill="none" stroke="#f2ede4" stroke-width="4"/>
-    <path d="M150 117 L150 175 M150 135 L120 155 M150 135 L180 118 M150 175 L128 230 M150 175 L172 225" stroke="#f2ede4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="90" cy="260" r="2.5" fill="#ff5a1f" opacity="0.7"/>
-    <circle cx="105" cy="270" r="2" fill="#ff5a1f" opacity="0.5"/>
-    <circle cx="80" cy="272" r="1.6" fill="#ff5a1f" opacity="0.4"/>
-  </svg>
-</section>
+<main id="top">
 
-<div class="divider" aria-hidden="true">
-  <svg width="120" height="14" viewBox="0 0 120 14" fill="none">
-    <line x1="0" y1="7" x2="45" y2="7" stroke="#332e26" stroke-width="2"/>
-    <line x1="75" y1="7" x2="120" y2="7" stroke="#332e26" stroke-width="2"/>
-    <circle cx="60" cy="7" r="6" fill="none" stroke="#ff5a1f" stroke-width="2"/>
-  </svg>
-</div>
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="pill"><span class="dot" aria-hidden="true"></span> قريباً — الوصول المبكر مجاني</div>
 
-<section class="problem">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">The problem</span>
-      <h2>بداية الكاليستينكس ما لازم تكون معقدة.</h2>
-    </div>
-    <ul class="problem-list reveal">
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-        <span><b>أغلب المصادر الجيدة بالإنجليزي.</b> صعب على كثير من المبتدئين العرب يفهمون التمارين وهم يترجمون بنفس الوقت.</span>
-      </li>
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-        <span><b>ما تدري وين تبدأ.</b> ولا كيف تتقدم من تمرين للثاني بشكل صحيح وآمن.</span>
-      </li>
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-        <span><b>التطبيقات المجانية مليانة إعلانات.</b> التجربة توتّر أكثر مما تساعد.</span>
-      </li>
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-        <span><b>المدرب الشخصي مو دايمًا متاح.</b> إما مكلف أو غير موجود بمنطقتك أصلاً.</span>
-      </li>
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-        <span><b>التمرين لحالك شائع،</b> بس لسا محتاج هيكلة وتوجيه واضح حتى تتقدم بثقة.</span>
-      </li>
-    </ul>
-  </div>
-</section>
+        <h1>تعلّم مهارات <span class="hl">الكاليسثينيكس</span> خطوة بخطوة، بالعربية.</h1>
 
-<section class="solution">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">The direction</span>
-      <h2>كل اللي تحتاجه للبداية — بالعربي.</h2>
-    </div>
-    <div class="solution-grid reveal">
-      <div class="solution-card">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
-        <h3>شرح بالعربي</h3>
-        <p>مفاهيم وتمارين الكاليستينكس موضّحة بلغة واضحة، مصممة تساعدك تفهم قبل ما تتحرك.</p>
-        <span class="badge-soon">قادم في النسخة الأولى</span>
-      </div>
-      <div class="solution-card">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
-        <h3>خطط تناسب المبتدئين</h3>
-        <p>مبنية حول أخذك خطوة بخطوة، بدون تعقيد ولا حركات تفوق مستواك.</p>
-        <span class="badge-soon">قادم في النسخة الأولى</span>
-      </div>
-      <div class="solution-card">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div>
-        <h3>تدرّج واضح بالتمارين</h3>
-        <p>من الأساسيات إلى المهارات الأصعب، بترتيب مبني على أسلوب التقدم الصحيح.</p>
-        <span class="badge-soon">قادم في النسخة الأولى</span>
-      </div>
-      <div class="solution-card">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></svg></div>
-        <h3>تتبّع تقدّمك</h3>
-        <p>شايف وين وصلت، وين رايح، وشو التمرين الجاي بدون ما تضيع.</p>
-        <span class="badge-soon">قادم في النسخة الأولى</span>
-      </div>
-    </div>
-  </div>
-</section>
+        <p class="lede">
+          تطبيق عربي خفيف يأخذك من الإحماء إلى المهارة: تمارين مصوّرة، عدّاد لكل ذراع،
+          وستريك يومي يخليك ملتزم. بدون حساب، وبدون إنترنت أثناء التمرين.
+        </p>
 
-<div class="divider" aria-hidden="true">
-  <svg width="120" height="14" viewBox="0 0 120 14" fill="none">
-    <line x1="0" y1="7" x2="45" y2="7" stroke="#332e26" stroke-width="2"/>
-    <line x1="75" y1="7" x2="120" y2="7" stroke="#332e26" stroke-width="2"/>
-    <circle cx="60" cy="7" r="6" fill="none" stroke="#ff5a1f" stroke-width="2"/>
-  </svg>
-</div>
+        <!-- ============ WAITLIST FORM ============ -->
+        <form class="join" id="join" novalidate autocomplete="on">
+          <label class="sr" for="handle">البريد الإلكتروني أو اسم المستخدم في Instagram</label>
+          <div class="field">
+            <div class="input-shell">
+              <input
+                id="handle" name="handle" type="text" inputmode="email" dir="auto"
+                placeholder="البريد الإلكتروني أو اسم المستخدم في Instagram"
+                autocomplete="email" spellcheck="false"
+                aria-describedby="form-msg assure" />
+              <span class="kind" id="kind" aria-hidden="true">
+                <svg id="kind-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="m3 7 9 6 9-6"/>
+                </svg>
+                <svg id="kind-ig" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                  <rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/>
+                </svg>
+              </span>
+            </div>
 
-<section id="how-it-works">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">How it works</span>
-      <h2>ثلاث خطوات بس.</h2>
-    </div>
-    <div class="steps reveal">
-      <div class="step">
-        <span class="num">01</span>
-        <h3>اختر مستواك</h3>
-        <p>قولنا وين تبدأ، حتى نبني لك المسار المناسب من أول يوم.</p>
-      </div>
-      <div class="step">
-        <span class="num">02</span>
-        <h3>اتبع خطتك</h3>
-        <p>خطة تمرين واضحة تناسب مستواك، بدون تخمين ولا حيرة.</p>
-      </div>
-      <div class="step">
-        <span class="num">03</span>
-        <h3>تتبّع تقدّمك</h3>
-        <p>تمرّن بثبات وتقدّم خطوة بخطوة نحو مهارتك الجاية.</p>
-      </div>
-    </div>
-  </div>
-</section>
+            <!-- honeypot: مصيدة للبوتات، مخفية عن المستخدم -->
+            <input class="hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" />
 
-<section class="validation">
-  <div class="wrap">
-    <div class="validation-inner reveal">
-      <span class="eyebrow">Why we're building this</span>
-      <p class="validation-quote">مبنية من محادثات حقيقية مع أكثر من ٢٠ رياضي مبتدئ.</p>
-      <p class="note">الفكرة ما طلعت من افتراضات — طلعت من كلام مباشر مع مبتدئين عن تجربتهم الفعلية بتعلم الكاليستينكس، والصعوبات اللي واجهوها. هذه الصفحة نفسها خطوة إضافية عشان نتأكد إذا الحل يستاهل نبنيه.</p>
-    </div>
-  </div>
-</section>
+            <button class="btn-join" id="submit" type="submit">
+              <span class="label"><span class="spinner" aria-hidden="true"></span><span id="btn-text">انضم للقائمة</span></span>
+            </button>
+          </div>
 
-<section class="waitlist" id="waitlist">
-  <div class="wrap">
-    <div class="waitlist-inner reveal">
-      <div class="section-head">
-        <span class="eyebrow">Early access</span>
-        <h2>كن من أول اللي يجربها.</h2>
-        <p style="color:var(--chalk-dim); margin-top:10px; font-size:15px;">نبني النسخة الأولى بناءً على اللي يحتاجه فعليًا المبتدئ العربي.</p>
+          <div class="assure" id="assure">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg> مجاني تماماً</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg> بدون حساب أو كلمة مرور</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg> نراسلك عند فتح الوصول المبكر</span>
+          </div>
+
+          <div class="msg" id="form-msg" role="status" aria-live="polite">
+            <svg id="msg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg>
+            <span id="msg-text"></span>
+          </div>
+        </form>
       </div>
-      <form id="waitlist-form" novalidate>
-        <div class="field">
-          <label for="wl-name">الاسم <span class="opt">(اختياري)</span></label>
-          <input type="text" id="wl-name" name="name" autocomplete="name">
-        </div>
-        <div class="field">
-          <label for="wl-email">البريد الإلكتروني <span class="opt">(مطلوب)</span></label>
-          <input type="email" id="wl-email" name="email" required autocomplete="email">
-        </div>
-        <div class="field">
-          <label>مستواك الحالي <span class="opt">(مطلوب)</span></label>
-          <div class="level-options">
-            <input type="radio" id="lvl-1" name="level" value="مبتدئ تمامًا">
-            <label for="lvl-1">مبتدئ تمامًا</label>
-            <input type="radio" id="lvl-2" name="level" value="مبتدئ">
-            <label for="lvl-2">مبتدئ</label>
-            <input type="radio" id="lvl-3" name="level" value="متوسط">
-            <label for="lvl-3">متوسط</label>
+
+      <div class="phone-col" aria-hidden="true">
+        <div class="phone">
+          <div class="screen">
+            <div class="notch"></div>
+            <div class="streak">
+              <span class="flame">🔥</span>
+              <div>
+                <b>١٢</b>
+                <small>يوم متواصل</small>
+              </div>
+            </div>
+
+            <div class="mock-h">المهارات</div>
+
+            <div class="mock-card">
+              <div class="mock-art"></div>
+              <div>
+                <div class="mock-t">الوقوف على اليدين</div>
+                <div class="mock-s">إحماء ٦ دقائق</div>
+              </div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-art a2"></div>
+              <div>
+                <div class="mock-t">المصعد</div>
+                <div class="mock-s">إحماء ٨ دقائق</div>
+              </div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-art a3"></div>
+              <div>
+                <div class="mock-t">العلم البشري</div>
+                <div class="mock-s">مغلق</div>
+              </div>
+              <span class="mock-lock">🔒</span>
+            </div>
           </div>
         </div>
-        <div class="field">
-          <label for="wl-goal">شنو أكثر شي تبي توصله بالكاليستينكس؟ <span class="opt">(اختياري)</span></label>
-          <textarea id="wl-goal" name="goal" placeholder="مثلاً: أول عقلة، أو مجرد أتحرك بثبات..."></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FEATURES ================= -->
+  <section class="band">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">لماذا كاليستي</div>
+        <h2>مبني للتمرين الحقيقي، مش للتصفّح.</h2>
+        <p>كل شي في التطبيق موجّه لهدف واحد: تفتحه، تتمرّن، وتخلص — بأقل احتكاك ممكن.</p>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="m10 9.5 5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg></div>
+          <h3>تمارين مصوّرة</h3>
+          <p>كل حركة معروضة بمقطع متكرّر مع نبرة صوتية للعدّ — تتابع بعينك، مش بقراءة شرح طويل.</p>
         </div>
-        <button type="submit" id="wl-submit" data-cta="waitlist-submit">انضم لقائمة الانتظار</button>
-        <p class="wl-status" id="wl-status" role="status" aria-live="polite"></p>
-        <p class="wl-fineprint">ما راح نرسل لك سبام. بس نعلمك أول ما يفتح الوصول المبكر.</p>
-      </form>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s5.5 4.2 5.5 9.3a5.5 5.5 0 1 1-11 0C6.5 8.5 9 6.5 9 6.5s.4 2.6 2 2.6c1.4 0 1-4.4 1-6.6Z"/></svg></div>
+          <h3>الستريك اليومي</h3>
+          <p>يوم بيوم، الستريك يعدّ التزامك. أسهل طريقة تبني عادة تمرين تصمد أكثر من أسبوعين.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16"/><path d="M7 19.5v-6M12 19.5V7M17 19.5v-9"/></svg></div>
+          <h3>تقدّم واضح</h3>
+          <p>تشوف أيامك ومهاراتك المفتوحة في صفحة واحدة — بدون أرقام معقّدة ولا رسوم بيانية مربكة.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4.5 20.5h15"/></svg></div>
+          <h3>خفيف ويشتغل أوفلاين</h3>
+          <p>حجم صغير جداً وبدون خوادم: بياناتك تبقى على جهازك، والتمرين يكمّل حتى بدون إنترنت.</p>
+        </div>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="faq">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">FAQ</span>
-      <h2>أسئلة شائعة</h2>
-    </div>
-    <div class="faq-list reveal">
-      <div class="faq-item">
-        <button class="faq-q"><span>هل التطبيق مجاني؟</span><span class="icon-plus"></span></button>
-        <div class="faq-a"><p>إي، التجربة الأساسية مخطط تكون مجانية بالكامل.</p></div>
+  <!-- ================= SKILLS ================= -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">المهارات</div>
+        <h2>ست مهارات، كل وحدة بمسار إحماء خاص فيها.</h2>
+        <p>تبدأ من الإحماء الصحيح للمفاصل والكتف، وتتدرّج للحركة نفسها. المهارات تُفتح واحدة بعد الثانية.</p>
       </div>
-      <div class="faq-item">
-        <button class="faq-q"><span>هل هو للمبتدئين فقط؟</span><span class="icon-plus"></span></button>
-        <div class="faq-a"><p>النسخة الأولى تركز بشكل أساسي على المبتدئين.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q"><span>أحتاج صالة رياضية؟</span><span class="icon-plus"></span></button>
-        <div class="faq-a"><p>لا. التجربة مصممة حول التمرين المستقل بأي مكان متاح، بمعدات بسيطة أو بدونها.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q"><span>أحتاج مدرب؟</span><span class="icon-plus"></span></button>
-        <div class="faq-a"><p>لا. الهدف نوفر لك توجيه واضح تقدر تتمرن فيه لحالك بثقة.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q"><span>متى الإطلاق؟</span><span class="icon-plus"></span></button>
-        <div class="faq-a"><p>المستخدمين الأوائل بياخذون الوصول أول. موعد الإطلاق الدقيق راح نعلنه لاحقًا.</p></div>
-      </div>
-    </div>
-  </div>
-</section>
 
-<section class="final-cta">
-  <div class="wrap reveal">
-    <h2>جاهز تبدأ رحلتك بالكاليستينكس؟</h2>
-    <p>انضم لقائمة الانتظار وساهم بتشكيل أول تجربة كاليستينكس عربية.</p>
-    <a href="#waitlist" class="btn-primary" data-cta="final">انضم لقائمة الانتظار</a>
-  </div>
-</section>
+      <div class="skills">
+        <div class="skill"><div class="skill-art">١</div><div class="skill-body"><h3>الوقوف على اليدين</h3><p>توازن وثبات الكتف</p></div></div>
+        <div class="skill"><div class="skill-art">٢</div><div class="skill-body"><h3>المصعد</h3><p>سحب وانتقال فوق البار</p></div></div>
+        <div class="skill"><div class="skill-art">٣</div><div class="skill-body"><h3>المسك الأمامي</h3><p>قوة الظهر والكور</p></div></div>
+        <div class="skill"><div class="skill-art">٤</div><div class="skill-body"><h3>المسك الخلفي</h3><p>مرونة الكتف والصدر</p></div></div>
+        <div class="skill"><div class="skill-art">٥</div><div class="skill-body"><h3>العلم البشري</h3><p>جوانب الجسم والقبضة</p></div></div>
+        <div class="skill"><div class="skill-art">٦</div><div class="skill-body"><h3>الضغط بذراع واحدة</h3><p>دفع أحادي وتوازن</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HOW ================= -->
+  <section class="band">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">كيف تبدأ</div>
+        <h2>ثلاث خطوات، وأنت داخل أول تمرين.</h2>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="num">١</div>
+          <h3>سجّل في القائمة</h3>
+          <p>بريدك الإلكتروني أو اسم المستخدم في Instagram — هذا كل المطلوب. بدون كلمة مرور.</p>
+        </div>
+        <div class="step">
+          <div class="num">٢</div>
+          <h3>نراسلك عند الإطلاق</h3>
+          <p>نرسل لك رابط التحميل بمجرد فتح الوصول المبكر. رسالة واحدة، بدون إزعاج.</p>
+        </div>
+        <div class="step">
+          <div class="num">٣</div>
+          <h3>ابدأ أول ستريك</h3>
+          <p>اختر مهارة، اتبع الإحماء، وسجّل يومك الأول. الباقي عادة تُبنى يوماً بيوم.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CTA ================= -->
+  <section>
+    <div class="wrap">
+      <div class="cta-box">
+        <h2>الوصول المبكر مجاني — واحجزه بخطوة واحدة.</h2>
+        <p>سجّل ببريدك أو باسم المستخدم في Instagram، ونتواصل معك أول ما يفتح الوصول المبكر. بدون حساب، وبدون أي رسوم.</p>
+        <button class="nav-cta" type="button" data-scroll-join>انضم للقائمة</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FAQ ================= -->
+  <section class="band">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">أسئلة شائعة</div>
+        <h2>قبل ما تسجّل</h2>
+      </div>
+
+      <div class="faq">
+        <details open>
+          <summary>هل التسجيل في القائمة مجاني؟</summary>
+          <p>نعم، مجاني بالكامل. الانضمام لقائمة الانتظار لا يكلّفك شيئاً ولا يتطلّب أي معلومات دفع.</p>
+        </details>
+        <details>
+          <summary>هل أحتاج إنشاء حساب أو كلمة مرور؟</summary>
+          <p>لا. تكتب بريدك الإلكتروني أو اسم المستخدم في Instagram فقط، ونحن نستخدمه لمراسلتك عند فتح الوصول المبكر.</p>
+        </details>
+        <details>
+          <summary>ماذا تحفظون عنّي بالضبط؟</summary>
+          <p>الحد الأدنى فقط: البريد الإلكتروني أو اسم المستخدم الذي أدخلته، ونوعه، وتاريخ التسجيل. لا نطلب اسمك ولا عمرك ولا أي بيانات تمرين، ولا نشارك القائمة مع أي جهة أخرى.</p>
+        </details>
+        <details>
+          <summary>سجّلت من قبل — هل أعيد التسجيل؟</summary>
+          <p>لا داعي. إذا كنت مسجّلاً ستظهر لك رسالة تخبرك بذلك، ومكانك في القائمة محفوظ.</p>
+        </details>
+        <details>
+          <summary>متى يفتح الوصول المبكر؟</summary>
+          <p>ما زلنا في مرحلة التجهيز ولا نريد إعطاء تاريخ غير دقيق. أول ما نجهز، أصحاب القائمة هم أول من يعرف.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
 
 <footer>
-  <div class="wrap">مبني بعد أكثر من ٢٠ محادثة مع رياضيين مبتدئين. — كاليستي © 2026</div>
+  <div class="wrap foot">
+    <div>© <span class="en">2026</span> كاليستي — جميع الحقوق محفوظة.</div>
+    <div style="display:flex;gap:22px;flex-wrap:wrap">
+      <a href="mailto:calisthi.support@gmail.com"><span class="en">calisthi.support@gmail.com</span></a>
+      <a href="https://instagram.com/calisthi" target="_blank" rel="noopener"><span class="en">@calisthi</span></a>
+    </div>
+  </div>
 </footer>
 
 <script>
-(function(){
-  const $ = (sel, el=document) => el.querySelector(sel);
-  const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+(function () {
+  "use strict";
 
-  // استخدام localStorage بدلاً من window.storage لمنع حدوث TypeError
-  async function trackEvent(key){
-    try {
-      let count = 0;
-      try {
-        const val = localStorage.getItem(key);
-        count = val ? (parseInt(val, 10) || 0) : 0;
-      } catch(e) { count = 0; }
-      localStorage.setItem(key, String(count + 1));
-    } catch(e) { console.error('analytics error', e); }
+  /* ==========================================================
+     ١) إعدادات Supabase — ضع القيم هنا
+     ========================================================== */
+  var SUPABASE_URL      = "https://jtmtlzfhmtpnhebwgflh.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_1AFyCH0_kge2CfhUtaUY9g_f387xjnv";
+  var TABLE             = "waitlist";
+  var TIMEOUT_MS        = 15000;
+
+  var DEMO = /YOUR-PROJECT/.test(SUPABASE_URL) || /YOUR-ANON/.test(SUPABASE_ANON_KEY);
+  if (DEMO) {
+    console.warn("[كاليستي] وضع تجريبي: لم يتم ضبط SUPABASE_URL/SUPABASE_ANON_KEY، فلن تُحفظ التسجيلات.");
   }
 
-  trackEvent('analytics:pageviews');
+  /* ==========================================================
+     ٢) الرسائل بالعربية
+     ========================================================== */
+  var MSG = {
+    empty:        "رجاءً أدخل بريدك الإلكتروني أو اسم المستخدم في Instagram.",
+    badEmail:     "هذا البريد الإلكتروني لا يبدو صحيحاً. تأكد منه وحاول مرة أخرى.",
+    badInstagram: "اسم المستخدم غير صالح. يُسمح بالأحرف الإنجليزية والأرقام والنقطة والشرطة السفلية فقط (حتى ٣٠ حرفاً).",
+    okEmail:      "تم تسجيلك في قائمة الانتظار. سنراسلك على بريدك الإلكتروني فور فتح الوصول المبكر.",
+    okInstagram:  "تم تسجيلك في قائمة الانتظار. سنراسلك على حسابك في Instagram فور فتح الوصول المبكر.",
+    duplicate:    "أنت مسجّل معنا من قبل — لا حاجة للتسجيل مرة أخرى. سنتواصل معك عند فتح الوصول المبكر.",
+    offline:      "يبدو أنك غير متصل بالإنترنت. تحقق من الاتصال وحاول مرة أخرى.",
+    network:      "تعذّر إتمام التسجيل الآن. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
+    server:       "حدث خطأ غير متوقع أثناء التسجيل. حاول بعد قليل، وإذا تكرر راسلنا على calisthi.support@gmail.com.",
+    demo:         "وضع تجريبي: النموذج يعمل لكن لم يُضبط الخادم بعد، فلن يُحفظ التسجيل."
+  };
 
-  $$('[data-cta]').forEach(btn=>{
-    btn.addEventListener('click', ()=> trackEvent('analytics:cta_clicks:' + btn.dataset.cta));
+  /* ==========================================================
+     ٣) الكشف التلقائي والتحقق
+     ========================================================== */
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+  var IG_RE    = /^[a-z0-9._]{1,30}$/;
+
+  function classify(raw) {
+    var v = String(raw == null ? "" : raw).trim();
+    // إزالة علامات الاتجاه والمسافات غير المرئية
+    v = v.replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "").trim();
+    if (!v) return { status: "empty" };
+
+    // رابط Instagram كامل ← اسم مستخدم
+    var url = v.match(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/?#\s]+)/i);
+    if (url) v = "@" + url[1];
+
+    // بريد إلكتروني: يحتوي @ في غير أول حرف
+    if (v.charAt(0) !== "@" && v.indexOf("@") > 0) {
+      var email = v.toLowerCase();
+      if (email.length <= 254 && EMAIL_RE.test(email)) {
+        return { status: "ok", type: "email", value: email };
+      }
+      return { status: "invalid", type: "email" };
+    }
+
+    // اسم مستخدم Instagram
+    var h = v.replace(/^@+/, "").toLowerCase();
+    if (!h) return { status: "invalid", type: "instagram" };
+    if (!IG_RE.test(h)) return { status: "invalid", type: "instagram" };
+    if (h.charAt(0) === "." || h.charAt(h.length - 1) === "." || h.indexOf("..") !== -1) {
+      return { status: "invalid", type: "instagram" };
+    }
+    return { status: "ok", type: "instagram", value: h };
+  }
+  window.__calisthiClassify = classify; // للاختبار
+
+  /* ==========================================================
+     ٤) واجهة النموذج
+     ========================================================== */
+  var form    = document.getElementById("join");
+  var input   = document.getElementById("handle");
+  var btn     = document.getElementById("submit");
+  var btnText = document.getElementById("btn-text");
+  var box     = document.getElementById("form-msg");
+  var boxText = document.getElementById("msg-text");
+  var boxIcon = document.getElementById("msg-icon");
+  var kind    = document.getElementById("kind");
+  var shell   = input.parentNode;
+  var iconMail= document.getElementById("kind-mail");
+  var iconIg  = document.getElementById("kind-ig");
+  var hp      = form.querySelector('input[name="company"]');
+
+  var ICONS = {
+    ok:   'm4 12.5 5 5L20 6.5',
+    err:  'M12 7v6M12 17h.01',
+    info: 'M12 8v5M12 16.5h.01'
+  };
+  var sent = Object.create(null); // منع الإرسال المكرر داخل نفس الجلسة
+  var busy = false;
+
+  function say(kindName, text) {
+    var k = (kindName === "ok" || kindName === "err") ? kindName : "info";
+    boxText.textContent = text;
+    boxIcon.innerHTML = '<path d="' + ICONS[k] + '"/>' +
+                        (k === "ok" ? "" : '<circle cx="12" cy="12" r="9.2"/>');
+    box.className = "msg show " + k;
+    box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function clearMsg() {
+    box.className = "msg";
+    input.removeAttribute("aria-invalid");
+  }
+  function setLoading(on) {
+    busy = on;
+    btn.disabled = on;
+    input.readOnly = on;
+    btn.classList.toggle("is-loading", on);
+    btnText.textContent = on ? "جارٍ التسجيل…" : "انضم للقائمة";
+  }
+
+  // مؤشّر نوع المدخل أثناء الكتابة
+  input.addEventListener("input", function () {
+    if (box.classList.contains("show")) clearMsg();
+    var r = classify(input.value);
+    if (!input.value.trim() || r.status === "empty") { kind.classList.remove("on"); shell.classList.remove("kinded"); return; }
+    var isEmail = r.type === "email";
+    iconMail.style.display = isEmail ? "" : "none";
+    iconIg.style.display   = isEmail ? "none" : "";
+    kind.classList.toggle("on", r.status === "ok");
+    shell.classList.toggle("kinded", r.status === "ok");
+    input.setAttribute("autocomplete", isEmail ? "email" : "username");
   });
 
-  const form = $('#waitlist-form');
-  const emailInput = $('#wl-email');
-  const statusEl = $('#wl-status');
-  const submitBtn = $('#wl-submit');
-  let startTracked = false;
-
-  form.addEventListener('focusin', ()=>{
-    if(!startTracked){ startTracked = true; trackEvent('analytics:waitlist_starts'); }
-  });
-
-  form.addEventListener('submit', async (e)=>{
+  form.addEventListener("submit", function (e) {
     e.preventDefault();
-    const name = $('#wl-name').value.trim();
-    const email = emailInput.value.trim().toLowerCase();
-    const levelInput = $('input[name="level"]:checked');
-    const goal = $('#wl-goal').value.trim();
+    if (busy) return;
 
-    statusEl.className = 'wl-status';
+    // مصيدة البوتات: إذا امتُلئ الحقل المخفي نُظهر نجاحاً صامتاً بدون إرسال
+    if (hp && hp.value) { say("ok", MSG.okEmail); return; }
 
-    if(!email || !/^\S+@\S+\.\S+$/.test(email)){
-      statusEl.textContent = 'رجاءً أدخل بريد إلكتروني صحيح.';
-      statusEl.className = 'wl-status error';
+    var r = classify(input.value);
+
+    if (r.status === "empty")  { input.setAttribute("aria-invalid", "true"); say("err", MSG.empty); input.focus(); return; }
+    if (r.status === "invalid"){
+      input.setAttribute("aria-invalid", "true");
+      say("err", r.type === "email" ? MSG.badEmail : MSG.badInstagram);
+      input.focus(); return;
+    }
+    input.removeAttribute("aria-invalid");
+
+    var key = r.type + ":" + r.value;
+    if (sent[key]) { say("info", MSG.duplicate); return; }
+
+    if (navigator.onLine === false) { say("err", MSG.offline); return; }
+
+    submit(r, key);
+  });
+
+  function submit(r, key) {
+    setLoading(true);
+    clearMsg();
+
+    if (DEMO) {
+      setTimeout(function () {
+        setLoading(false);
+        sent[key] = true;
+        say("info", MSG.demo);
+      }, 900);
       return;
     }
-    if(!levelInput){
-      statusEl.textContent = 'رجاءً اختر مستواك الحالي.';
-      statusEl.className = 'wl-status error';
-      return;
-    }
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'جاري الإرسال...';
+    var ctrl = ("AbortController" in window) ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, TIMEOUT_MS);
 
-    try {
-      const key = 'waitlist:' + email;
-      let existing = null;
-      try { existing = localStorage.getItem(key); } catch(e) { existing = null; }
-
-      if(existing){
-        statusEl.textContent = 'أنت مسجل عندنا من قبل! بنعلمك أول ما يفتح الوصول المبكر.';
-        statusEl.className = 'wl-status success';
-        form.reset();
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'انضم لقائمة الانتظار';
+    fetch(SUPABASE_URL.replace(/\/+$/, "") + "/rest/v1/" + TABLE, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({ handle: r.value, handle_type: r.type }),
+      signal: ctrl ? ctrl.signal : undefined
+    })
+    .then(function (res) {
+      clearTimeout(timer);
+      if (res.status === 201 || res.status === 200 || res.status === 204) {
+        sent[key] = true;
+        setLoading(false);
+        say("ok", r.type === "email" ? MSG.okEmail : MSG.okInstagram);
+        input.value = "";
+        kind.classList.remove("on");
+        shell.classList.remove("kinded");
         return;
       }
+      if (res.status === 409) { sent[key] = true; setLoading(false); say("info", MSG.duplicate); return; }
 
-      const entry = {
-        name: name || null,
-        email: email,
-        level: levelInput.value,
-        goal: goal || null,
-        ts: new Date().toISOString()
-      };
-      
-      localStorage.setItem(key, JSON.stringify(entry));
-
-      await trackEvent('analytics:waitlist_submissions');
-      await trackEvent('analytics:level:' + levelInput.value);
-
-      statusEl.textContent = 'أنت داخل القائمة! بنعلمك أول ما يفتح الوصول المبكر.';
-      statusEl.className = 'wl-status success';
-      form.reset();
-      submitBtn.textContent = 'تم الانضمام ✓';
-      setTimeout(()=>{ submitBtn.textContent = 'انضم لقائمة الانتظار'; submitBtn.disabled = false; }, 2500);
-    } catch(err){
-      console.error(err);
-      statusEl.textContent = 'صار خطأ بالإرسال، حاول مرة ثانية.';
-      statusEl.className = 'wl-status error';
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'انضم لقائمة الانتظار';
-    }
-  });
-
-  $$('.faq-item').forEach(item=>{
-    const q = $('.faq-q', item);
-    q.addEventListener('click', ()=>{
-      const isOpen = item.classList.contains('open');
-      $$('.faq-item').forEach(i=>i.classList.remove('open'));
-      if(!isOpen) item.classList.add('open');
-    });
-  });
-
-  const milestones = [25, 50, 75, 100];
-  const reached = new Set();
-  window.addEventListener('scroll', ()=>{
-    const doc = document.documentElement;
-    const scrolled = ((window.scrollY + window.innerHeight) / doc.scrollHeight) * 100;
-    milestones.forEach(m=>{
-      if(scrolled >= m && !reached.has(m)){
-        reached.add(m);
-        trackEvent('analytics:scroll_' + m);
-      }
-    });
-  }, { passive: true });
-
-  const revealEls = $$('.reveal');
-  if('IntersectionObserver' in window){
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach(entry=>{
-        if(entry.isIntersecting){ entry.target.classList.add('in-view'); io.unobserve(entry.target); }
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        setLoading(false);
+        if (body && (body.code === "23505" || /duplicate key/i.test(body.message || ""))) {
+          sent[key] = true; say("info", MSG.duplicate);
+        } else {
+          console.error("[كاليستي] فشل التسجيل", res.status, body);
+          say("err", MSG.server);
+        }
       });
-    }, { threshold: 0.12 });
-    revealEls.forEach(el=>io.observe(el));
-  } else {
-    revealEls.forEach(el=>el.classList.add('in-view'));
+    })
+    .catch(function (err) {
+      clearTimeout(timer);
+      setLoading(false);
+      console.error("[كاليستي] خطأ شبكة", err);
+      say("err", (err && err.name === "AbortError") ? MSG.network : MSG.network);
+    });
   }
+
+  // أزرار "انضم للقائمة" في الترويسة وقسم الدعوة
+  Array.prototype.forEach.call(document.querySelectorAll("[data-scroll-join]"), function (b) {
+    b.addEventListener("click", function () {
+      form.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(function () { input.focus({ preventScroll: true }); }, 420);
+    });
+  });
 })();
 </script>
-
 </body>
 </html>
